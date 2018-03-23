@@ -161,6 +161,8 @@ class Config(object):
             self.files.append(f)
         self.data = ConfigObject()
         self.objects = {}
+        # applies to linux, other unixes, Mac
+        self.is_posix = os.name == 'posix'
 
     def add(self, name, value):
         """Add a new config"""

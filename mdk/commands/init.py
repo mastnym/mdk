@@ -23,10 +23,16 @@ http://github.com/FMCorz/mdk
 """
 
 import os
-import grp
+try:
+    import grp
+    import pwd
+except ImportError, e:
+    from ..config import Conf
+    c = Conf()
+    if c.is_posix:
+        raise e
+
 import re
-import pwd
-import subprocess
 import logging
 
 from ..command import Command

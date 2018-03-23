@@ -23,6 +23,9 @@ http://github.com/FMCorz/mdk
 """
 
 import os
+
+from mdk.tools import yesOrNo
+
 try:
     import grp
     import pwd
@@ -59,15 +62,21 @@ class InitCommand(Command):
         return path
 
     def run(self, args):
-
+        c = Conf()
         # Check what user we want to initialise for.
         while True:
             username = question('What user are you initialising MDK for?', get_current_user())
             try:
                 user = pwd.getpwnam(username)
             except:
-                logging.warning('Error while getting information for user %s' % (username))
-                continue
+                if c.is_posix:
+                    logging.warning('Error while getting information for user %s' % (username))
+                    continue
+                # for windows make sure that user is correctly spelled
+                # TODO check all users in the system
+                username_correct = yesOrNo('Is this username correct? "%s"' % username)
+                if username_correct:
+                    break
 
             try:
                 usergroup = grp.getgrgid(user.pw_gid)
@@ -85,7 +94,8 @@ class InitCommand(Command):
         if not os.path.isdir(userdir):
             logging.info('Creating directory %s.' % userdir)
             mkdir(userdir, 0755)
-            os.chown(userdir, user.pw_uid, usergroup.gr_gid)
+            if c.is_posix:
+                os.chown(userdir, user.pw_uid, usergroup.gr_gid)
 
         # Checking if the config file exists.
         userconfigfile = os.path.join(userdir, 'config.json')
@@ -97,7 +107,8 @@ class InitCommand(Command):
         elif not os.path.isfile(userconfigfile):
             logging.info('Creating user config file in %s.' % userconfigfile)
             open(userconfigfile, 'w')
-            os.chown(userconfigfile, user.pw_uid, usergroup.gr_gid)
+            if c.is_posix:
+                os.chown(userconfigfile, user.pw_uid, usergroup.gr_gid)
 
         # Loading the configuration.
         from ..config import Conf as Config
@@ -110,7 +121,8 @@ class InitCommand(Command):
             try:
                 if not os.path.isdir(www):
                     mkdir(www, 0775)
-                    os.chown(www, user.pw_uid, usergroup.gr_gid)
+                    if c.is_posix:
+                        os.chown(www, user.pw_uid, usergroup.gr_gid)
             except:
                 logging.error('Error while creating directory %s' % www)
                 continue
@@ -129,7 +141,8 @@ class InitCommand(Command):
                 if not os.path.isdir(storage):
                     if storage != www:
                         mkdir(storage, 0775)
-                        os.chown(storage, user.pw_uid, usergroup.gr_gid)
+                        if c.is_posix:
+                            os.chown(storage, user.pw_uid, usergroup.gr_gid)
                     else:
                         logging.error('Error! dirs.www and dirs.storage must be different!')
                         continue
@@ -152,7 +165,8 @@ class InitCommand(Command):
             try:
                 logging.info('Creating MDK directory %s' % mdkdir)
                 mkdir(mdkdir, 0775)
-                os.chown(mdkdir, user.pw_uid, usergroup.gr_gid)
+                if c.is_posix:
+                    os.chown(mdkdir, user.pw_uid, usergroup.gr_gid)
             except:
                 logging.error('Error while creating %s, please fix manually.' % mdkdir)
 
@@ -184,4 +198,5 @@ class InitCommand(Command):
         print '  mdk create'
         print '(This will take some time, but don\'t worry, that\'s because the cache is still empty)'
         print ''
-        print '/!\ Please logout/login before to avoid permission issues: sudo su `whoami`'
+        if c.is_posix:
+            print '/!\ Please logout/login before to avoid permission issues: sudo su `whoami`'

@@ -88,14 +88,11 @@ def getMDLFromCommitMessage(message):
 def get_current_user():
     """Attempt to get the currently logged in user"""
     username = 'root'
+    import getpass
     try:
-        username = os.getlogin()
-    except OSError:
-        import getpass
-        try:
-            username = getpass.getuser()
-        except:
-            pass
+        username = getpass.getuser()
+    except:
+        pass
     return username
 
 

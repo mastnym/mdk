@@ -27,6 +27,8 @@ import re
 import shlex
 import subprocess
 
+from mdk.tools import prepare_shell_command
+
 
 class Git(object):
 
@@ -124,10 +126,10 @@ class Git(object):
             raise Exception('This is not a Git repository')
 
         if not type(cmd) == list:
-            cmd = shlex.split(str(cmd))
+            cmd = cmd.split()
         cmd.insert(0, self.getBin())
 
-        logging.debug(' '.join(cmd))
+        cmd = prepare_shell_command(cmd)
 
         try:
             proc = subprocess.Popen(cmd,
@@ -190,7 +192,7 @@ class Git(object):
         if path == None:
             path = self.getPath()
 
-        cmd = shlex.split(str('%s log -1') % self.getBin())
+        cmd = prepare_shell_command(str('%s log -1') % self.getBin())
         proc = subprocess.Popen(cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

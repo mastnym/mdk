@@ -25,6 +25,8 @@ http://github.com/FMCorz/mdk
 import os
 import shutil
 import logging
+
+from mdk.tools import create_symlink
 from .tools import mkdir, process, stableBranch
 from .exceptions import CreateException
 from .config import Conf
@@ -150,24 +152,15 @@ class Workplace(object):
         process('%s clone %s %s' % (C.get('git'), repository, wwwDir))
 
         # Symbolic link
-        if os.path.islink(linkDir):
-            os.remove(linkDir)
-        if os.path.isfile(linkDir) or os.path.isdir(linkDir):  # No elif!
-            logging.warning('Could not create symbolic link. Please manually create: ln -s %s %s' % (wwwDir, linkDir))
-        else:
-            os.symlink(wwwDir, linkDir)
+        create_symlink(wwwDir, linkDir)
 
         # Symlink to extra.
-        if os.path.isfile(extraLinkDir) or os.path.isdir(extraLinkDir):
-            logging.warning('Could not create symbolic link. Please manually create: ln -s %s %s' % (extraDir, extraLinkDir))
-        else:
-            os.symlink(extraDir, extraLinkDir)
+        create_symlink(extraDir, extraLinkDir)
 
         # Symlink to dataDir in wwwDir
         if type(C.get('symlinkToData')) == str:
             linkDataDir = os.path.join(wwwDir, C.get('symlinkToData'))
-            if not os.path.isfile(linkDataDir) and not os.path.isdir(linkDataDir) and not os.path.islink(linkDataDir):
-                os.symlink(dataDir, linkDataDir)
+            create_symlink(dataDir, linkDataDir)
 
         logging.info('Checking out branch...')
         repo = git.Git(wwwDir, C.get('git'))

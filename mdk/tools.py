@@ -169,9 +169,7 @@ def parseBranch(branch):
 
 
 def process(cmd, cwd=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
-    if type(cmd) != list:
-        cmd = shlex.split(str(cmd))
-    logging.debug(' '.join(cmd))
+    cmd = prepare_shell_command(cmd)
     try:
         proc = subprocess.Popen(cmd, cwd=cwd, stdout=stdout, stderr=stderr)
         (out, err) = proc.communicate()
@@ -245,3 +243,44 @@ class ProcessInThread(threading.Thread):
             # Reading the output seems to prevent the process to hang.
             if self.stdout == subprocess.PIPE:
                 proc.stdout.read(1)
+
+
+def prepare_shell_command(cmd):
+    # on posix, convert cmd to list
+    if C.is_posix and type(cmd) != list:
+        cmd = shlex.split(str(cmd))
+        logging.debug(' '.join(cmd))
+    # on windows this is not necessary, cmd is fine as string
+    elif not C.is_posix and type(cmd) is list:
+        cmd = ' '.join(cmd)
+        logging.debug(cmd)
+    return cmd
+
+
+def create_symlink(source, link_name):
+    source_is_dir = os.path.isdir(source)
+    # on posix, we can check already linked source
+    #
+    if C.is_posix and os.path.islink(link_name):
+        os.remove(link_name)
+    if os.path.isfile(link_name) or os.path.isdir(link_name):  # No elif!
+        if C.is_posix:
+            logging.warning('Could not create symbolic link. Please manually create: ln -s %s %s' % (source, link_name))
+        else:
+            logging.warning('Could not create symbolic link. Please manually create: mklink %s %s %s'
+                            % ("/D" if source_is_dir else "", link_name, source)
+                            )
+    else:
+        if C.is_posix:
+            os.symlink(source, link_name)
+        else:
+            cmd = prepare_shell_command("mklink %s %s %s" % ("/D" if source_is_dir else "", link_name, source))
+            # need to call subprocess with shell=True as mklink is an app of cmd, not a native windows app
+            try:
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                out, err = proc.communicate()
+            except KeyboardInterrupt as e:
+                proc.kill()
+                raise e
+            if proc.returncode != 0:
+                logging.warning(out + "" + err)

@@ -28,7 +28,7 @@ import logging
 import shutil
 from tempfile import gettempdir
 
-from .tools import getMDLFromCommitMessage, mkdir, process, parseBranch
+from .tools import getMDLFromCommitMessage, mkdir, process, parseBranch, prepare_shell_command
 from .db import DB
 from .config import Conf
 from .git import Git, GitException
@@ -181,9 +181,9 @@ class Moodle(object):
         cli = os.path.join(self.get('path'), cli.lstrip('/'))
         if not os.path.isfile(cli):
             raise Exception('Could not find script to call')
-        if type(args) == 'list':
+        if type(args) == list:
             args = ' '.join(args)
-        cmd = '%s %s %s' % (C.get('php'), cli, args)
+        cmd = prepare_shell_command('%s %s %s' % (C.get('php'), cli, args))
         return process(cmd, cwd=self.get('path'), **kwargs)
 
     def currentBranch(self):
@@ -415,8 +415,10 @@ class Moodle(object):
         if result[0] != 0:
             raise InstallException('Error while running the install, please manually fix the problem.\n- Command was: %s %s %s' % (C.get('php'), cli, args))
 
+
         configFile = os.path.join(self.path, 'config.php')
-        os.chmod(configFile, 0666)
+        if C.is_posix:
+            os.chmod(configFile, 0666)
         try:
             if C.get('path') != '' and C.get('path') != None:
                 self.addConfig('sessioncookiepath', '/%s/%s/' % (C.get('path'), self.identifier))
